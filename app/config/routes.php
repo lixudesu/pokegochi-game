@@ -17,8 +17,8 @@
 
 return [
     array('/', 'GET', 'index@index'),
-    array('/letters/pick', 'GET', 'letters@pick'),
-    array('/letters/add', 'POST', 'letters@add'),
+    array('/letters/pick', 'ANY', 'letters@pick'),
+    array('/letters/add', 'ANY', 'letters@add'),
     array('/letters/check/{type}', 'ANY', 'letters@check'),
     array('/cronjob/letters/clean', 'ANY', 'cronjob@clean_letters'),
     array('$404', 'ANY', 'error404@index')

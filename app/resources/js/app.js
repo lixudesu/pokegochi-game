@@ -3,6 +3,7 @@ require('phaser');
 
 const MAX_ARCHIVE_DISPLAY_ITEMS = 15;
 const MAX_LETTER_MESSAGE_PREVIEW_LEN = 10;
+const MIN_LETTER_MESSAGE_LEN = 5;
 
 window.currentPromptCallback = function(text) {};
 
@@ -160,6 +161,11 @@ window.sendLetter = function() {
     let dialog = document.querySelector('.letter-writing-overlay');
     if (dialog) {
         let message = document.querySelector('#letter-writing-message');
+
+        if (message.value.length < MIN_LETTER_MESSAGE_LEN) {
+            alert('Your message must contain at least ' + MIN_LETTER_MESSAGE_LEN + ' characters.');
+            return;
+        }
 
         window.addLetter(message.value, function() {
             window.currentDraftLetterCallback('sent');

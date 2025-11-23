@@ -42,9 +42,14 @@ class Letters extends \Asatru\Database\Model {
     {
         try {
             $token = md5($_SERVER['REMOTE_ADDR']);
+            $message = trim($message);
 
             if (Actions::maximum($token, 'add')) {
                 throw new \Exception('User has reached their limit for today');
+            }
+
+            if (strlen($message) === 0) {
+                throw new \Exception('Message does not contain any characters');
             }
 
             static::raw('INSERT INTO `@THIS` (token, pet, content, approved, assigned) VALUES(?, ?, ?, FALSE, FALSE)', [$token, $pet, $message]);

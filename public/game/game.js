@@ -397,6 +397,7 @@ class KrepagotchiGame extends Phaser.Scene {
             this.load.spritesheet('particle', 'game/assets/sprites/heart.png', { frameWidth: 32, frameHeight: 32 });
             this.load.spritesheet('smoke', 'game/assets/sprites/smoke.png', { frameWidth: 128, frameHeight: 128 });
             this.load.spritesheet('ball', 'game/assets/sprites/ball.png', { frameWidth: 76, frameHeight: 76 });
+            this.load.spritesheet('bubble', 'game/assets/sprites/bubble.png', { frameWidth: 512, frameHeight: 512 });
             this.load.spritesheet('butterfly', 'game/assets/sprites/butterfly.png', { frameWidth: 16, frameHeight: 16 });
             this.load.spritesheet('frog', 'game/assets/sprites/frog.png', { frameWidth: 64, frameHeight: 64 });
             this.load.spritesheet('mailbox_closed', 'game/assets/sprites/mailbox-closed.png', { frameWidth: 64, frameHeight: 64 });
@@ -423,6 +424,7 @@ class KrepagotchiGame extends Phaser.Scene {
             this.load.audio('refreshed', 'game/assets/sounds/refreshed.wav');
             this.load.audio('noaction', 'game/assets/sounds/noaction.wav');
             this.load.audio('boing', 'game/assets/sounds/boing.wav');
+            this.load.audio('missedbubble', 'game/assets/sounds/missedbubble.wav');
             this.load.audio('rain_1', 'game/assets/sounds/rain_1.wav');
             this.load.audio('rain_2', 'game/assets/sounds/rain_2.wav');
             this.load.audio('thunder_1', 'game/assets/sounds/thunder_1.wav');
@@ -437,6 +439,7 @@ class KrepagotchiGame extends Phaser.Scene {
 
             for (let i = 1; i <= 10; i++) {
                   this.load.audio('step' + i, 'game/assets/sounds/step' + i + '.wav');
+                  this.load.audio('pop' + i, 'game/assets/sounds/pop' + i + '.ogg');
             }
 
             this.precacheNewYearsEve();
@@ -862,15 +865,20 @@ class KrepagotchiGame extends Phaser.Scene {
             this.sndRefreshed = this.sound.add('refreshed');
             this.sndNoAction = this.sound.add('noaction');
             this.sndBoing = this.sound.add('boing');
+            this.sndMissedBubble = this.sound.add('missedbubble');
             this.sndMailbox = this.sound.add('mailbox');
             this.sndSuccess = this.sound.add('success');
 
             this.loadNewYearsEveAssets();
             
             this.sndSteps = [];
+            this.sndPops = [];
             for (let i = 1; i <= 10; i++) {
                   const step = this.sound.add('step' + i).setVolume(0.5);
                   this.sndSteps.push(step);
+
+                  const pop = this.sound.add('pop' + i).setVolume(0.5);
+                  this.sndPops.push(pop);
             }
 
             this.loadHelp();
@@ -916,7 +924,13 @@ class KrepagotchiGame extends Phaser.Scene {
                         const playful = Phaser.Math.Between(1, 2);
                         if ((playful === 1) && (this.krepaStats.affection < 100)) {
                               this.krepaPlayful = true;
-                              this.initBall();
+
+                              const selact = Phaser.Math.Between(1, 2);
+                              if (selact === 1) {
+                                    this.initBall();
+                              } else {
+                                    this.initBubblePop();
+                              }
                         }
 
                         const chance = Phaser.Math.Between(1, 4);
@@ -1028,7 +1042,10 @@ class KrepagotchiGame extends Phaser.Scene {
                   this.sndTheme = this.sound.add('theme');
                   this.sndTheme.loop = true;
                   this.sndTheme.setVolume(0.22);
-                  this.sndTheme.play();
+
+                  if (Number(this.getConfigValue('music_enable', '1'))) {
+                        this.sndTheme.play();
+                  }
 
                   this.tmrAmbience = this.time.addEvent({
                         delay: Phaser.Math.Between(12500, 15000),
@@ -1343,9 +1360,11 @@ class KrepagotchiGame extends Phaser.Scene {
             infoText.setAlpha(0);
             infoText.setVisible(false);
 
-            this.add.image(gameconfig.scale.width - 25, 25, 'btn_circle').setScale(0.8);
+            const depth = 105;
 
-            const helpAction = this.add.image(gameconfig.scale.width - 25, 25, 'sym_help').setScale(0.8).setInteractive();
+            this.add.image(gameconfig.scale.width - 25, 25, 'btn_circle').setDepth(depth).setScale(0.8);
+
+            const helpAction = this.add.image(gameconfig.scale.width - 25, 25, 'sym_help').setDepth(depth).setScale(0.8).setInteractive();
             helpAction.on('pointerdown', function() {
                   if (infoText.visible) {
                         infoText.setAlpha(1);
@@ -1378,7 +1397,9 @@ class KrepagotchiGame extends Phaser.Scene {
       {
             let self = this;
 
-            const helpAction = this.add.image(gameconfig.scale.width - 65, 25, 'biome').setScale(0.4).setInteractive();
+            const depth = 105;
+
+            const helpAction = this.add.image(gameconfig.scale.width - 65, 25, 'biome').setDepth(105).setScale(0.4).setInteractive();
             helpAction.on('pointerdown', function() {
                   self.loadBiomeSelectionMenu();
 
@@ -1573,7 +1594,7 @@ class KrepagotchiGame extends Phaser.Scene {
                               succmsg.setPosition(gameconfig.scale.width / 2 - succmsg.width / 2, gameconfig.scale.height / 2 - succmsg.height / 2);
 
                               self.time.addEvent({
-                                    delay: 3000,
+                                    delay: 3500,
                                     loop: false,
                                     callback: function() {
                                           self.tweens.add({
@@ -1655,9 +1676,7 @@ class KrepagotchiGame extends Phaser.Scene {
       {
             let self = this;
 
-            const depth = 105;
-
-            const icon = this.add.image(35, gameconfig.scale.height - 140, 'music').setDepth(depth).setScale(0.5).setInteractive();
+            const icon = this.add.image(35, gameconfig.scale.height - 140, 'music').setScale(0.5).setInteractive();
             icon.on('pointerdown', function() {
                   let value = parseInt(self.getConfigValue('music_enable', '1'));
                   value = !value;
@@ -1678,6 +1697,10 @@ class KrepagotchiGame extends Phaser.Scene {
             });
             icon.on('pointerover', function() { icon.setScale(0.6); });
             icon.on('pointerout', function() { icon.setScale(0.5); });
+
+            if (!Number(self.getConfigValue('music_enable', '1'))) {
+                  icon.setTintFill(0x323232);
+            }
       }
 
       krepaBirthdayToday()
@@ -1758,13 +1781,15 @@ class KrepagotchiGame extends Phaser.Scene {
             });
       }
 
-      spawnConfetti(x, y)
+      spawnConfetti(x, y, rc = true, red = 0, green = 0, blue = 0)
       {
             let self = this;
 
-            const red = Phaser.Math.Between(0, 255);
-            const green = Phaser.Math.Between(0, 255);
-            const blue = Phaser.Math.Between(0, 255);
+            if (rc) {
+                  red = Phaser.Math.Between(0, 255);
+                  green = Phaser.Math.Between(0, 255);
+                  blue = Phaser.Math.Between(0, 255);
+            }
 
             const chunk = self.make.graphics({ x: 0, y: 0, add: false });
             chunk.fillStyle(self.rgbToHex(red, green, blue), 0.8);
@@ -1870,6 +1895,79 @@ class KrepagotchiGame extends Phaser.Scene {
 
                   this.input.setDraggable(this.ball);
             }
+      }
+
+      initBubblePop()
+      {
+            let self = this;
+
+            this.time.addEvent({
+                  delay: 1000,
+                  loop: true,
+                  callback: function() {
+                        self.spawnSoapBubble();
+                  },
+                  callbackScope: self
+            });
+      }
+
+      spawnSoapBubble()
+      {
+            let self = this;
+
+            let bubble = this.physics.add.sprite(0, 0, 'bubble').refreshBody();
+            bubble.setScale(0.1);
+            bubble.setCollideWorldBounds(true);
+
+            bubble.setInteractive();
+            bubble.on('pointerdown', function() {
+                  bubble.lifetime.destroy();
+                  bubble.destroy();
+
+                  self.spawnConfetti(bubble.x, bubble.y, false, 255, 255, 255);
+
+                  self.addAffection(AFFECTION_VALUE / 2);
+                  self.playPopSound();
+            });
+
+            this.tweens.add({
+                  targets: bubble,
+                  scaleY: 0.090,
+                  scaleX: 0.105,
+                  duration: 500,
+                  yoyo: true,
+                  repeat: -1,
+                  ease: 'Sine.easeInOut'
+            });
+
+            bubble.setRotation(-Math.PI / 2);
+            bubble.setPosition(Phaser.Math.Between(50, gameconfig.scale.width - 50), gameconfig.scale.height - 150);
+
+            const speed = Phaser.Math.Between(50, 100);
+
+            bubble.setVelocity(
+                  Math.cos(bubble.rotation) * speed,
+                  Math.sin(bubble.rotation) * speed
+            );
+
+            this.physics.add.collider(this.fenceColliderTop, bubble, function() {
+                  bubble.lifetime.destroy();
+                  bubble.destroy();
+
+                  self.spawnConfetti(bubble.x, bubble.y, false, 255, 255, 255);
+
+                  self.sndMissedBubble.play();
+            });
+
+            bubble.lifetime = this.time.addEvent({
+                  delay: 10000,
+                  loop: false,
+                  callback: function() {
+                        bubble.lifetime.destroy();
+                        bubble.destroy();
+                  },
+                  callbackScope: self
+            });
       }
 
       moveKrepa()
@@ -2932,6 +3030,12 @@ class KrepagotchiGame extends Phaser.Scene {
       playStepSound()
       {
             const sound = this.sndSteps[Phaser.Math.Between(0, this.sndSteps.length - 1)];
+            sound.play();
+      }
+
+      playPopSound()
+      {
+            const sound = this.sndPops[Phaser.Math.Between(0, this.sndPops.length - 1)];
             sound.play();
       }
 
