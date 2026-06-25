@@ -1,7 +1,7 @@
 {
-  "name": "asatruphp",
+  "name": "pokegochi",
   "version": "1.0.0",
-  "description": "A lightweight PHP framework",
+  "description": "A Pokemon-inspired virtual pet forked from Krepagotchi",
   "main": "index.js",
   "directories": {},
   "scripts": {
@@ -11,15 +11,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/danielbrendel/dnyAsatruPHP-App.git"
+    "url": "git+https://github.com/lixudesu/pokegochi-game.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/danielbrendel/dnyAsatruPHP-App/issues"
+    "url": "https://github.com/lixudesu/pokegochi-game/issues"
   },
-  "homepage": "https://github.com/danielbrendel/dnyAsatruPHP-App#readme",
+  "homepage": "https://github.com/lixudesu/pokegochi-game#readme",
   "devDependencies": {
     "css-loader": "^5.2.7",
     "sass": "^1.70.0",

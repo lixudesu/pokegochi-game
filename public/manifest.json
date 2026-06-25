@@ -1,6 +1,6 @@
 {
-    "name": "Krepagotchi",
-    "short_name": "Krepagotchi",
+    "name": "PokeGochi",
+    "short_name": "PokeGochi",
     "icons": [{
         "src": "img/logo.png",
         "sizes": "256x256",

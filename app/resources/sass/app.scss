@@ -14,7 +14,7 @@ html, body {
     background-size: cover;
 }
 
-.prompt-overlay, .letter-reading-overlay, .letter-writing-overlay, .letter-archive-overlay {
+.prompt-overlay {
     position: fixed;
     width: 100%;
     height: 100%;
@@ -22,34 +22,20 @@ html, body {
     background-color: rgba(0, 0, 0, 0.5);
 }
 
-.prompt-content, .letter-reading-content, .letter-writing-content, .letter-archive-content {
+.prompt-content {
     position: absolute;
     z-index: 3;
     top: 50%;
     left: 50%;
+    min-width: 350px;
     transform: translate(-50%, -50%);
-    @media screen and (max-width: 890px) {
-        width: 100%;
-    }
-    @media screen and (max-width: 450px) {
-        top: 50%;
-        left: unset;
-        transform: translate(2.5%, -50%);
-        min-width: unset !important;
-        width: 95%;
-    }
     font-family: "Jersey 10", sans-serif;
     font-size: 2.0em;
     background-color: rgb(50, 50, 50);
     border-radius: 5px;
 }
 
-.letter-reading-content, .letter-writing-content, .letter-archive-content {
-    font-size: 1.0em;
-    min-width: 350px;
-}
-
-.prompt-title, .letter-reading-title, .letter-writing-title, .letter-archive-title {
+.prompt-title {
     margin-bottom: 10px;
     background-color: rgb(100, 100, 100);
     color: rgb(200, 200, 200);
@@ -58,11 +44,7 @@ html, body {
     border-top-left-radius: 5px;
 }
 
-.letter-reading-title, .letter-writing-title, .letter-archive-title {
-    font-size: 0.8em;
-}
-
-.prompt-title img, .letter-reading-title img, .letter-writing-title img, .letter-archive-title img {
+.prompt-title img {
     position: relative;
     top: 9px;
     width: 40px;
@@ -76,35 +58,6 @@ html, body {
     padding-right: 20px;
     color: rgb(200, 200, 200);
     font-size: 0.8em;
-    @media screen and (max-width: 890px) {
-        padding-left: 20px;
-        padding-right: 20px;
-        font-size: 0.7em;
-    }
-}
-
-.letter-reading-message, .letter-writing-message {
-    padding-top: 20px;
-    padding-left: 20px;
-    padding-right: 20px;
-    margin-bottom: 30px;
-    color: rgb(200, 200, 200);
-    font-size: 1.0em;
-    inline-size: 83%;
-    overflow-wrap: break-word;
-    font-family: 'Comic Sans MS', 'Jersey 10', sans-serif;
-    @media screen and (max-width: 890px) {
-        padding-left: 20px;
-        padding-right: 20px;
-        font-size: 0.9em;
-    }
-}
-
-.letter-writing-message textarea {
-    color: rgb(255, 255, 255);
-    background-color: rgb(50, 50, 50);
-    width: 100%;
-    min-height: 123px;
 }
 
 .prompt-input {
@@ -124,11 +77,12 @@ html, body {
     border-radius: 15px;
 }
 
-.prompt-input input:hover, .prompt-input input:focus-visible {
+.prompt-input input:hover,
+.prompt-input input:focus-visible {
     border: 1px solid rgb(150, 150, 150);
 }
 
-.prompt-action, .letter-reading-action, .letter-writing-action, .letter-archive-action {
+.prompt-action {
     margin-top: 10px;
     margin-bottom: 10px;
     padding-left: 20px;
@@ -136,121 +90,38 @@ html, body {
     font-size: 0.8em;
 }
 
-.letter-reading-action {
-    margin-top: 45px;
-}
-
-.letter-writing-action {
-    margin-top: 35px;
-}
-
-.prompt-action a, .letter-reading-action a {
+.prompt-action a {
     color: rgb(50, 175, 225);
     text-decoration: none;
 }
 
-.prompt-action a:hover, .letter-reading-action a:hover {
+.prompt-action a:hover {
     color: rgb(50, 175, 225);
     text-decoration: underline;
-}
-
-.letter-reading-action a.button-delete {
-    color: rgb(253, 90, 90);
-    text-decoration: none;
-}
-
-.letter-reading-action a.button-delete:hover {
-    color: rgb(253, 90, 90);
-    text-decoration: underline;
-}
-
-.letter-reading-action a, .letter-writing-action a {
-    margin-right: 20px;
-}
-
-.letter-writing-action a.button-send {
-    color: rgb(90, 253, 190);
-    text-decoration: none;
-}
-
-.letter-writing-action a.button-send:hover {
-    color: rgb(90, 253, 190);
-    text-decoration: underline;
-}
-
-.letter-writing-action a.button-close {
-    color: rgb(200, 200, 200);
-    text-decoration: none;
-}
-
-.letter-writing-action a.button-close:hover {
-    color: rgb(200, 200, 200);
-    text-decoration: underline;
-}
-
-.letter-archive-list {
-    position: relative;
-    min-height: 50px;
-}
-
-.letter-archive-list i {
-    color: rgb(200, 200, 200);
-    padding: 30px;
-}
-
-.letter-archive-action a.button-close {
-    color: rgb(150, 150, 150);
-    text-decoration: none;
-}
-
-.letter-archive-action a.button-close:hover {
-    color: rgb(150, 150, 150);
-    text-decoration: underline;
-}
-
-.archive-item {
-    position: relative;
-    width: 90%;
-    padding: 10px;
-    color: rgb(200, 200, 200);
-}
-
-.archive-item:last-child {
-    margin-bottom: 35px;
-}
-
-.archive-item-from {
-    display: inline-block;
-    margin-right: 20px;
-}
-
-.archive-item-preview {
-    display: inline-block;
-}
-
-.archive-item-preview a {
-    color: rgb(200, 200, 200);
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.archive-item-preview a:hover {
-    color: rgb(200, 200, 200);
-    text-decoration: underline;
-    font-weight: bold;
-}
-
-.archive-item-date {
-    display: inline-block;
-    float: right;
-}
-
-.archive-empty {
-    padding: 20px;
-    font-style: italic;
-    color: rgb(123, 123, 123);
 }
 
 .is-hidden {
     display: none;
+}
+
+@media screen and (max-width: 890px) {
+    .prompt-content {
+        width: 100%;
+    }
+
+    .prompt-label {
+        padding-left: 20px;
+        padding-right: 20px;
+        font-size: 0.7em;
+    }
+}
+
+@media screen and (max-width: 450px) {
+    .prompt-content {
+        top: 50%;
+        left: unset;
+        min-width: unset;
+        width: 95%;
+        transform: translate(2.5%, -50%);
+    }
 }

@@ -1,12 +1,12 @@
 {
-    "name": "krepagotchi",
+    "name": "pokegochi",
     "version": "1.0.0",
-    "description": "A pixelated, adorable virtual pet",
-    "author": "Daniel Brendel",
+    "description": "A Pokemon-inspired virtual pet",
+    "author": "Daniel Brendel, fork by lixudesu",
     "main": "src/main.js",
     "build": {
-        "appId": "com.danielbrendel.krepagotchi",
-        "productName": "Krepagotchi",
+        "appId": "com.lixudesu.pokegochi",
+        "productName": "PokeGochi",
         "icon": "game/logo"
     },
     "scripts": {

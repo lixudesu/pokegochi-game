@@ -1,0 +1,66 @@
+[
+  {
+    "id": "pikachu",
+    "displayName": "Pikachu",
+    "file": "PIKACHU.webp",
+    "frameSize": 50,
+    "frames": 56,
+    "scale": 2.35
+  },
+  {
+    "id": "bulbasaur",
+    "displayName": "Bulbasaur",
+    "file": "BULBASAUR.webp",
+    "frameSize": 38,
+    "frames": 49,
+    "scale": 2.65
+  },
+  {
+    "id": "charmander",
+    "displayName": "Charmander",
+    "file": "CHARMANDER.webp",
+    "frameSize": 42,
+    "frames": 53,
+    "scale": 2.65
+  },
+  {
+    "id": "squirtle",
+    "displayName": "Squirtle",
+    "file": "SQUIRTLE.webp",
+    "frameSize": 43,
+    "frames": 26,
+    "scale": 2.55
+  },
+  {
+    "id": "eevee",
+    "displayName": "Eevee",
+    "file": "EEVEE.webp",
+    "frameSize": 49,
+    "frames": 63,
+    "scale": 2.35
+  },
+  {
+    "id": "riolu",
+    "displayName": "Riolu",
+    "file": "RIOLU.webp",
+    "frameSize": 49,
+    "frames": 63,
+    "scale": 2.35
+  },
+  {
+    "id": "mimikyu",
+    "displayName": "Mimikyu",
+    "file": "MIMIKYU.webp",
+    "frameSize": 96,
+    "frames": 63,
+    "scale": 1.45
+  },
+  {
+    "id": "gengar",
+    "displayName": "Gengar",
+    "file": "GENGAR.webp",
+    "frameSize": 79,
+    "frames": 44,
+    "scale": 1.75
+  }
+]
