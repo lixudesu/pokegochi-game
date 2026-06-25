@@ -10,7 +10,9 @@ const COOLDOWNS = {
       pet: 5 * 60 * 1000,
       play: 20 * 60 * 1000
 };
-const PET_SCALE_MULTIPLIER = 1.65;
+const PET_SCALE_MULTIPLIER = 1.85;
+const HERO_X = 180;
+const HERO_Y = 252;
 
 const POKEMON_MANIFEST = [
       { id: 'pikachu', displayName: 'Pikachu', file: 'PIKACHU.webp', frameSize: 50, frames: 56, scale: 2.35 },
@@ -20,7 +22,15 @@ const POKEMON_MANIFEST = [
       { id: 'eevee', displayName: 'Eevee', file: 'EEVEE.webp', frameSize: 49, frames: 63, scale: 2.35 },
       { id: 'riolu', displayName: 'Riolu', file: 'RIOLU.webp', frameSize: 49, frames: 63, scale: 2.35 },
       { id: 'mimikyu', displayName: 'Mimikyu', file: 'MIMIKYU.webp', frameSize: 96, frames: 63, scale: 1.45 },
-      { id: 'gengar', displayName: 'Gengar', file: 'GENGAR.webp', frameSize: 79, frames: 44, scale: 1.75 }
+      { id: 'gengar', displayName: 'Gengar', file: 'GENGAR.webp', frameSize: 79, frames: 44, scale: 1.75, portrait: 'go/gengar.png', portraitScale: 1.28, selectorScale: 0.32 },
+      { id: 'umbreon', displayName: 'Umbreon', portrait: 'go/umbreon.png', portraitScale: 1.22, selectorScale: 0.32 },
+      { id: 'registeel', displayName: 'Registeel', portrait: 'go/registeel.png', portraitScale: 1.12, selectorScale: 0.3 },
+      { id: 'azumarill', displayName: 'Azumarill', portrait: 'go/azumarill.png', portraitScale: 1.25, selectorScale: 0.32 },
+      { id: 'machamp', displayName: 'Machamp', portrait: 'go/machamp.png', portraitScale: 1.16, selectorScale: 0.31 },
+      { id: 'sableye', displayName: 'Sableye', portrait: 'go/sableye.png', portraitScale: 1.3, selectorScale: 0.33 },
+      { id: 'lanturn', displayName: 'Lanturn', portrait: 'go/lanturn.png', portraitScale: 1.18, selectorScale: 0.32 },
+      { id: 'haunter', displayName: 'Haunter', portrait: 'go/haunter.png', portraitScale: 1.26, selectorScale: 0.33 },
+      { id: 'victreebel', displayName: 'Victreebel', portrait: 'go/victreebel.png', portraitScale: 1.18, selectorScale: 0.32 }
 ];
 
 const BIOMES = [
@@ -103,6 +113,11 @@ function getPokemonById(id)
       return POKEMON_MANIFEST.find((pokemon) => pokemon.id === id) || POKEMON_MANIFEST[0];
 }
 
+function getPokemonTextureKey(pokemon)
+{
+      return pokemon.portrait ? pokemon.id + '_portrait' : pokemon.id;
+}
+
 class PokegochiGame extends Phaser.Scene {
       preload()
       {
@@ -117,16 +132,26 @@ class PokegochiGame extends Phaser.Scene {
             this.load.image('biome', 'game/assets/sprites/biome.png');
             this.load.image('sym_help', 'game/assets/sprites/sym_help.png');
             this.load.image('pokegochi_bg', 'game/assets/backgrounds/pokegochi-grass.png');
+            this.load.image('go_pokeball_badge', 'game/assets/ui/go-pokeball-badge.png');
+            this.load.image('great_league_badge', 'game/assets/ui/great-league-badge.png');
+            this.load.image('ultra_league_badge', 'game/assets/ui/ultra-league-badge.png');
+            this.load.image('master_league_badge', 'game/assets/ui/master-league-badge.png');
             this.load.spritesheet('ball', 'game/assets/sprites/ball.png', { frameWidth: 76, frameHeight: 76 });
             this.load.spritesheet('bubble', 'game/assets/sprites/bubble.png', { frameWidth: 512, frameHeight: 512 });
             this.load.spritesheet('particle', 'game/assets/sprites/heart.png', { frameWidth: 32, frameHeight: 32 });
             this.load.json('pokemon_manifest', 'game/assets/pokemons/manifest.json');
 
             for (const pokemon of POKEMON_MANIFEST) {
-                  this.load.spritesheet(pokemon.id, 'game/assets/pokemons/' + pokemon.file, {
-                        frameWidth: pokemon.frameSize,
-                        frameHeight: pokemon.frameSize
-                  });
+                  if (pokemon.file) {
+                        this.load.spritesheet(pokemon.id, 'game/assets/pokemons/' + pokemon.file, {
+                              frameWidth: pokemon.frameSize,
+                              frameHeight: pokemon.frameSize
+                        });
+                  }
+
+                  if (pokemon.portrait) {
+                        this.load.image(pokemon.id + '_portrait', 'game/assets/pokemons/' + pokemon.portrait);
+                  }
             }
 
             for (const biome of BIOMES) {
@@ -155,7 +180,7 @@ class PokegochiGame extends Phaser.Scene {
       create()
       {
             this.uiDepth = 1000;
-            this.worldRect = new Phaser.Geom.Rectangle(48, 174, gameconfig.scale.width - 96, gameconfig.scale.height - 332);
+            this.worldRect = new Phaser.Geom.Rectangle(36, 112, gameconfig.scale.width - 72, gameconfig.scale.height - 210);
             this.buttons = {};
             this.hud = {};
             this.statRows = {};
@@ -202,6 +227,10 @@ class PokegochiGame extends Phaser.Scene {
       createAnimations()
       {
             for (const pokemon of POKEMON_MANIFEST) {
+                  if (!pokemon.file || !pokemon.frames) {
+                        continue;
+                  }
+
                   const animKey = pokemon.id + '_idle';
                   if (this.anims.exists(animKey)) {
                         continue;
@@ -248,8 +277,26 @@ class PokegochiGame extends Phaser.Scene {
             const scale = Math.max(gameconfig.scale.width / background.width, gameconfig.scale.height / background.height);
             background.setScale(scale);
 
-            this.add.rectangle(gameconfig.scale.width / 2, 58, gameconfig.scale.width, 116, 0x103f34, 0.12).setDepth(4);
-            this.add.rectangle(gameconfig.scale.width / 2, gameconfig.scale.height - 48, gameconfig.scale.width, 96, 0xffffff, 0.18).setDepth(4);
+            const stage = this.add.graphics().setDepth(4);
+            stage.fillStyle(0x061226, 0.91);
+            stage.fillRoundedRect(-24, -28, gameconfig.scale.width + 48, 354, 30);
+            stage.fillStyle(0x103f55, 0.42);
+            stage.fillRoundedRect(28, 112, gameconfig.scale.width - 56, 170, 34);
+            stage.lineStyle(1, 0x9edcf2, 0.22);
+            stage.strokeRoundedRect(28, 112, gameconfig.scale.width - 56, 170, 34);
+
+            for (let i = 0; i < 8; i++) {
+                  this.add.rectangle(
+                        gameconfig.scale.width / 2,
+                        82 + i * 24,
+                        gameconfig.scale.width,
+                        18,
+                        i % 2 === 0 ? 0x112b4d : 0x37142d,
+                        0.05 + i * 0.01
+                  ).setDepth(5);
+            }
+
+            this.add.rectangle(gameconfig.scale.width / 2, 522, gameconfig.scale.width, 236, 0xf4fff8, 0.42).setDepth(4);
       }
 
       createWeather()
@@ -285,56 +332,73 @@ class PokegochiGame extends Phaser.Scene {
             return Boolean(localStorage.getItem(saveKey('name')) && localStorage.getItem(saveKey('species')));
       }
 
+      createPokemonPreview(pokemon, x, y, maxSize, depth)
+      {
+            const key = getPokemonTextureKey(pokemon);
+            const preview = pokemon.portrait
+                  ? this.add.image(x, y, key)
+                  : this.add.sprite(x, y, key, 0);
+            const scale = pokemon.portrait
+                  ? (pokemon.selectorScale || 0.32)
+                  : Math.min(pokemon.scale * 0.68, maxSize / pokemon.frameSize);
+
+            preview.setScale(scale).setDepth(depth);
+            preview.setData('baseScale', scale);
+            return preview;
+      }
+
       showStarterSelection()
       {
-            this.add.rectangle(gameconfig.scale.width / 2, gameconfig.scale.height / 2, gameconfig.scale.width - 34, gameconfig.scale.height - 70, 0x1f1f1f, 0.9)
-                  .setDepth(this.uiDepth);
-            this.add.text(gameconfig.scale.width / 2, 58, 'Escolha seu Pokemon', {
-                  fontSize: '22px',
+            const overlay = this.add.graphics().setDepth(this.uiDepth);
+            overlay.fillStyle(0x061226, 0.92);
+            overlay.fillRoundedRect(12, 18, gameconfig.scale.width - 24, gameconfig.scale.height - 36, 26);
+            overlay.lineStyle(2, 0x9be7c0, 0.42);
+            overlay.strokeRoundedRect(12, 18, gameconfig.scale.width - 24, gameconfig.scale.height - 36, 26);
+
+            this.add.text(gameconfig.scale.width / 2, 48, 'Escolha seu Pokemon', {
+                  fontSize: '20px',
                   color: '#ffffff',
                   fontFamily: 'Pixel, monospace'
             }).setOrigin(0.5).setDepth(this.uiDepth + 1);
-            this.add.text(gameconfig.scale.width / 2, 88, 'Seu parceiro vai salvar progresso neste navegador.', {
+            this.add.text(gameconfig.scale.width / 2, 76, 'Toque em um parceiro para comecar.', {
                   fontSize: '10px',
-                  color: '#c9d7e8',
+                  color: '#bfe8dc',
                   fontFamily: 'Pixel, monospace',
                   align: 'center'
             }).setOrigin(0.5).setDepth(this.uiDepth + 1);
 
-            const startX = 96;
-            const startY = 158;
-            const gapX = 168;
+            const startX = 54;
+            const startY = 130;
+            const gapX = 84;
             const gapY = 104;
 
             POKEMON_MANIFEST.forEach((pokemon, index) => {
-                  const col = index % 2;
-                  const row = Math.floor(index / 2);
+                  const col = index % 4;
+                  const row = Math.floor(index / 4);
                   const x = startX + col * gapX;
                   const y = startY + row * gapY;
 
-                  const card = this.add.rectangle(x, y, 132, 82, 0x2b3848, 0.88)
-                        .setStrokeStyle(1, 0x7fb5ff, 0.5)
+                  const card = this.add.rectangle(x, y, 74, 88, 0xf8fffb, 0.96)
+                        .setStrokeStyle(2, 0x67d99c, 0.42)
                         .setInteractive({ useHandCursor: true })
                         .setDepth(this.uiDepth + 1);
-                  const sprite = this.add.sprite(x, y - 9, pokemon.id, 0)
-                        .setScale(pokemon.scale * 0.55)
-                        .setDepth(this.uiDepth + 2);
-                  const label = this.add.text(x, y + 27, pokemon.displayName, {
-                        fontSize: '12px',
-                        color: '#ffffff',
+                  const preview = this.createPokemonPreview(pokemon, x, y - 13, 60, this.uiDepth + 2);
+                  const label = this.add.text(x, y + 31, pokemon.displayName.slice(0, 10), {
+                        fontSize: '8px',
+                        color: '#17313a',
                         fontFamily: 'Pixel, monospace'
                   }).setOrigin(0.5).setDepth(this.uiDepth + 2);
 
                   card.on('pointerover', () => {
-                        card.setFillStyle(0x385678, 0.95);
-                        sprite.setScale(pokemon.scale * 0.62);
+                        card.setFillStyle(0xe6fff1, 1);
+                        preview.setScale(preview.getData('baseScale') * 1.08);
                   });
                   card.on('pointerout', () => {
-                        card.setFillStyle(0x2b3848, 0.88);
-                        sprite.setScale(pokemon.scale * 0.55);
+                        card.setFillStyle(0xf8fffb, 0.96);
+                        preview.setScale(preview.getData('baseScale'));
                   });
                   card.on('pointerdown', () => this.chooseStarter(pokemon));
-                  sprite.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.chooseStarter(pokemon));
+                  preview.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.chooseStarter(pokemon));
                   label.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.chooseStarter(pokemon));
             });
       }
@@ -501,18 +565,36 @@ class PokegochiGame extends Phaser.Scene {
       createPet()
       {
             const pokemon = getPokemonById(this.state.species);
-            const petScale = pokemon.scale * PET_SCALE_MULTIPLIER;
+            const key = getPokemonTextureKey(pokemon);
+            const petScale = pokemon.portrait
+                  ? (pokemon.portraitScale || 1.18)
+                  : pokemon.scale * PET_SCALE_MULTIPLIER;
 
-            this.pet = this.physics.add.sprite(gameconfig.scale.width / 2, 330, pokemon.id)
-                  .setScale(petScale)
-                  .setDepth(20)
-                  .setCollideWorldBounds(true)
-                  .play(pokemon.id + '_idle');
-            this.pet.body.setCollideWorldBounds(true);
-            this.pet.body.setBoundsRectangle(this.worldRect);
-            this.petTarget = this.pickPetTarget();
-            this.petNameOffset = Math.max(58, this.pet.displayHeight / 2 + 16);
-            this.petThoughtOffset = Math.max(76, this.pet.displayHeight / 2 + 34);
+            this.petShadow = this.add.ellipse(HERO_X, HERO_Y + 86, 154, 30, 0x03121c, 0.32)
+                  .setDepth(this.uiDepth + 11);
+            this.pet = pokemon.portrait
+                  ? this.add.image(HERO_X, HERO_Y, key)
+                  : this.add.sprite(HERO_X, HERO_Y, key, 0);
+            this.pet.setScale(petScale)
+                  .setDepth(this.uiDepth + 16)
+                  .setAlpha(this.state.battleActive ? 0.55 : 1);
+
+            if (!pokemon.portrait) {
+                  this.pet.play(pokemon.id + '_idle');
+            }
+
+            this.petBaseY = HERO_Y;
+            this.petNameOffset = Math.max(58, this.pet.displayHeight / 2 + 18);
+            this.petThoughtOffset = Math.max(84, this.pet.displayHeight / 2 + 36);
+
+            this.tweens.add({
+                  targets: this.pet,
+                  y: HERO_Y - 7,
+                  duration: 1450,
+                  yoyo: true,
+                  repeat: -1,
+                  ease: 'Sine.inOut'
+            });
 
             this.nameText = this.add.text(this.pet.x, this.pet.y + this.petNameOffset, this.state.name, {
                   fontSize: '12px',
@@ -520,13 +602,13 @@ class PokegochiGame extends Phaser.Scene {
                   fontFamily: 'Pixel, monospace',
                   backgroundColor: 'rgba(0, 0, 0, 0.45)',
                   padding: { x: 6, y: 3 }
-            }).setOrigin(0.5).setDepth(21);
+            }).setOrigin(0.5).setDepth(this.uiDepth + 17).setVisible(false);
 
             this.sleepText = this.add.text(this.pet.x, this.pet.y - this.petThoughtOffset, 'Zzz', {
                   fontSize: '20px',
                   color: '#d8ecff',
                   fontFamily: 'Pixel, monospace'
-            }).setOrigin(0.5).setDepth(22).setVisible(this.state.sleeping);
+            }).setOrigin(0.5).setDepth(this.uiDepth + 26).setVisible(this.state.sleeping);
       }
 
       pickPetTarget()
@@ -539,21 +621,7 @@ class PokegochiGame extends Phaser.Scene {
 
       movePet()
       {
-            if (this.state.sleeping || this.state.battleActive || this.miniGameActive || this.selectorOpen) {
-                  this.pet.setVelocity(0, 0);
-                  this.pet.setAlpha(this.state.battleActive ? 0.45 : 1);
-            } else {
-                  this.pet.setAlpha(1);
-
-                  if (!this.petTarget || Phaser.Math.Distance.Between(this.pet.x, this.pet.y, this.petTarget.x, this.petTarget.y) < 14) {
-                        this.petTarget = this.pickPetTarget();
-                  }
-
-                  const speed = 18 + this.state.energy * 0.22;
-                  const angle = Phaser.Math.Angle.Between(this.pet.x, this.pet.y, this.petTarget.x, this.petTarget.y);
-                  this.physics.velocityFromRotation(angle, speed, this.pet.body.velocity);
-                  this.pet.setFlipX(this.pet.body.velocity.x < -2);
-            }
+            this.pet.setAlpha(this.state.battleActive ? 0.55 : 1);
 
             this.nameText.setPosition(this.pet.x, this.pet.y + this.petNameOffset);
             this.sleepText.setPosition(this.pet.x, this.pet.y - this.petThoughtOffset);
@@ -562,118 +630,133 @@ class PokegochiGame extends Phaser.Scene {
 
       createHud()
       {
-            const shadow = this.add.graphics().setDepth(this.uiDepth);
-            shadow.fillStyle(0x000000, 0.18);
-            shadow.fillRoundedRect(18, 16, 324, 98, 18);
+            this.drawProfileArc();
 
-            const panel = this.add.graphics().setDepth(this.uiDepth + 1);
-            panel.fillStyle(0xffffff, 0.97);
-            panel.fillRoundedRect(16, 10, 328, 98, 18);
-            panel.lineStyle(2, 0xe8f2e9, 1);
-            panel.strokeRoundedRect(16, 10, 328, 98, 18);
+            this.hud.levelCaption = this.add.text(HERO_X, 18, 'Nivel', {
+                  fontSize: '10px',
+                  color: '#bde8ff',
+                  fontFamily: 'Pixel, monospace'
+            }).setOrigin(0.5).setDepth(this.uiDepth + 13);
+            this.hud.levelNumber = this.add.text(HERO_X, 48, '', {
+                  fontSize: '38px',
+                  color: '#ffffff',
+                  fontFamily: 'Pixel, monospace'
+            }).setOrigin(0.5).setDepth(this.uiDepth + 13);
+            this.hud.cp = this.add.text(HERO_X, 88, '', {
+                  fontSize: '15px',
+                  color: '#e8f7ff',
+                  fontFamily: 'Pixel, monospace'
+            }).setOrigin(0.5).setDepth(this.uiDepth + 13);
 
-            this.drawPokeballIcon(58, 58, 34, this.uiDepth + 2);
-            const pokeballHit = this.add.circle(58, 58, 38, 0xffffff, 0.001)
-                  .setDepth(this.uiDepth + 4)
+            const selectorGlow = this.add.circle(318, 204, 27, 0x68e69e, 0.95)
+                  .setStrokeStyle(3, 0xffffff, 0.9)
+                  .setDepth(this.uiDepth + 19)
                   .setInteractive({ useHandCursor: true });
-            pokeballHit.on('pointerdown', () => {
+            this.hud.selectorButton = this.add.image(318, 204, 'go_pokeball_badge')
+                  .setScale(0.104)
+                  .setDepth(this.uiDepth + 20)
+                  .setInteractive({ useHandCursor: true });
+            const openSelector = () => {
                   this.sounds.click.play();
                   this.togglePokemonSelector();
-            });
+            };
+            selectorGlow.on('pointerdown', openSelector);
+            this.hud.selectorButton.on('pointerdown', openSelector);
 
-            this.hud.name = this.add.text(96, 25, '', {
-                  fontSize: '17px',
+            const shadow = this.add.graphics().setDepth(this.uiDepth + 7);
+            shadow.fillStyle(0x001820, 0.2);
+            shadow.fillRoundedRect(14, 310, 332, 214, 24);
+
+            const panel = this.add.graphics().setDepth(this.uiDepth + 8);
+            panel.fillStyle(0xffffff, 0.98);
+            panel.fillRoundedRect(10, 302, 340, 214, 24);
+            panel.lineStyle(2, 0xd8eee4, 1);
+            panel.strokeRoundedRect(10, 302, 340, 214, 24);
+
+            this.hud.name = this.add.text(30, 324, '', {
+                  fontSize: '22px',
                   color: '#263238',
                   fontFamily: 'Pixel, monospace'
-            }).setDepth(this.uiDepth + 3);
+            }).setDepth(this.uiDepth + 18);
+            this.hud.species = this.add.text(32, 350, '', {
+                  fontSize: '9px',
+                  color: '#6f8387',
+                  fontFamily: 'Pixel, monospace'
+            }).setDepth(this.uiDepth + 18);
 
-            this.hud.conditionPill = this.add.graphics().setDepth(this.uiDepth + 2);
-            this.hud.condition = this.add.text(176, 30, '', {
+            this.hud.conditionPill = this.add.graphics().setDepth(this.uiDepth + 17);
+            this.hud.condition = this.add.text(264, 334, '', {
                   fontSize: '8px',
                   color: '#ffffff',
                   fontFamily: 'Pixel, monospace'
-            }).setOrigin(0.5).setDepth(this.uiDepth + 3);
+            }).setOrigin(0.5).setDepth(this.uiDepth + 18);
+            this.hud.leagueBadge = this.add.image(316, 340, 'great_league_badge')
+                  .setScale(0.18)
+                  .setDepth(this.uiDepth + 18);
 
-            this.hud.levelCaption = this.add.text(286, 20, 'Nivel', {
-                  fontSize: '9px',
-                  color: '#6a7880',
-                  fontFamily: 'Pixel, monospace'
-            }).setOrigin(0.5).setDepth(this.uiDepth + 3);
-            this.hud.levelNumber = this.add.text(286, 35, '', {
-                  fontSize: '31px',
-                  color: '#2f353a',
-                  fontFamily: 'Pixel, monospace'
-            }).setOrigin(0.5).setDepth(this.uiDepth + 3);
-
-            this.add.rectangle(96, 78, 214, 9, 0xd6f4de, 1).setOrigin(0, 0.5).setDepth(this.uiDepth + 2);
-            this.hud.xpFill = this.add.rectangle(96, 78, 214, 9, 0x1fc878, 1).setOrigin(0, 0.5).setDepth(this.uiDepth + 3);
-            this.hud.xpText = this.add.text(96, 88, '', {
+            this.add.rectangle(32, 376, 260, 8, 0xe5f3ea, 1).setOrigin(0, 0.5).setDepth(this.uiDepth + 17);
+            this.hud.xpFill = this.add.rectangle(32, 376, 260, 8, 0x39d48a, 1).setOrigin(0, 0.5).setDepth(this.uiDepth + 18);
+            this.hud.xpText = this.add.text(32, 388, '', {
                   fontSize: '8px',
-                  color: '#3b4a51',
+                  color: '#60757a',
                   fontFamily: 'Pixel, monospace'
-            }).setDepth(this.uiDepth + 3);
-            this.hud.battle = this.add.text(228, 88, '', {
+            }).setDepth(this.uiDepth + 18);
+            this.hud.battle = this.add.text(194, 388, '', {
                   fontSize: '8px',
-                  color: '#3b4a51',
+                  color: '#60757a',
                   fontFamily: 'Pixel, monospace'
-            }).setDepth(this.uiDepth + 3);
+            }).setDepth(this.uiDepth + 18);
 
-            this.createStatChip('hunger', 'Fome', 14, 118, 0xff6b6b);
-            this.createStatChip('energy', 'Energia', 98, 118, 0x35aef2);
-            this.createStatChip('happiness', 'Feliz', 186, 118, 0xffb703);
-            this.createStatChip('affection', 'Afeto', 270, 118, 0xe56ad7);
+            this.createStatChip('hunger', 'Fome', 30, 412, 0xff5d66);
+            this.createStatChip('energy', 'Energia', 190, 412, 0x43b7ff);
+            this.createStatChip('happiness', 'Feliz', 30, 458, 0xffca3a);
+            this.createStatChip('affection', 'Afeto', 190, 458, 0xda6cf5);
       }
 
-      drawPokeballIcon(x, y, radius, depth)
+      drawProfileArc()
       {
-            const glow = this.add.circle(x, y, radius + 8, 0xffd447, 0.95).setDepth(depth);
-            const g = this.add.graphics().setDepth(depth + 1);
-            g.fillStyle(0xffffff, 1);
-            g.fillCircle(x, y, radius);
-            g.fillStyle(0xf04b37, 1);
-            g.slice(x, y, radius, Phaser.Math.DegToRad(180), Phaser.Math.DegToRad(360), false);
-            g.fillPath();
-            g.lineStyle(3, 0x2f3437, 1);
-            g.strokeCircle(x, y, radius);
-            g.lineBetween(x - radius + 4, y, x + radius - 4, y);
-            g.fillStyle(0xffffff, 1);
-            g.fillCircle(x, y, radius * 0.32);
-            g.lineStyle(3, 0x2f3437, 1);
-            g.strokeCircle(x, y, radius * 0.32);
-
-            return glow;
+            const arc = this.add.graphics().setDepth(this.uiDepth + 10);
+            arc.lineStyle(5, 0xffffff, 0.92);
+            arc.beginPath();
+            arc.arc(HERO_X, 244, 132, Phaser.Math.DegToRad(205), Phaser.Math.DegToRad(335), false);
+            arc.strokePath();
+            arc.lineStyle(3, 0x89f5d0, 0.28);
+            arc.beginPath();
+            arc.arc(HERO_X, 244, 126, Phaser.Math.DegToRad(207), Phaser.Math.DegToRad(333), false);
+            arc.strokePath();
+            this.hud.cpDot = this.add.circle(HERO_X + 120, 196, 6, 0xffffff, 1)
+                  .setStrokeStyle(2, 0x89f5d0, 1)
+                  .setDepth(this.uiDepth + 12);
       }
 
       createStatChip(key, label, x, y, color)
       {
-            const bg = this.add.graphics().setDepth(this.uiDepth + 1);
-            bg.fillStyle(0xffffff, 0.92);
-            bg.fillRoundedRect(x, y, 76, 28, 14);
-            bg.lineStyle(1, 0xe5f2e8, 1);
-            bg.strokeRoundedRect(x, y, 76, 28, 14);
-
-            this.add.circle(x + 14, y + 14, 6, color, 1).setDepth(this.uiDepth + 2);
-            this.add.text(x + 25, y + 5, label, {
+            this.add.circle(x, y + 7, 6, color, 1).setDepth(this.uiDepth + 18);
+            this.add.text(x + 13, y, label, {
                   fontSize: '8px',
                   color: '#5f6f76',
                   fontFamily: 'Pixel, monospace'
-            }).setDepth(this.uiDepth + 2);
-            const value = this.add.text(x + 25, y + 15, '', {
-                  fontSize: '10px',
+            }).setDepth(this.uiDepth + 18);
+            const value = this.add.text(x + 112, y, '', {
+                  fontSize: '9px',
                   color: '#20292e',
                   fontFamily: 'Pixel, monospace'
-            }).setDepth(this.uiDepth + 2);
+            }).setOrigin(1, 0).setDepth(this.uiDepth + 18);
+            this.add.rectangle(x, y + 24, 122, 7, 0xe8f0ec, 1).setOrigin(0, 0.5).setDepth(this.uiDepth + 17);
+            const fill = this.add.rectangle(x, y + 24, 122, 7, color, 1).setOrigin(0, 0.5).setDepth(this.uiDepth + 18);
 
-            this.statRows[key] = { value };
+            this.statRows[key] = { fill, value };
       }
 
       createMenu()
       {
             const dock = this.add.graphics().setDepth(this.uiDepth + 1);
-            dock.fillStyle(0xffffff, 0.94);
-            dock.fillRoundedRect(10, gameconfig.scale.height - 92, gameconfig.scale.width - 20, 78, 20);
-            dock.lineStyle(1, 0xdcefe5, 1);
-            dock.strokeRoundedRect(10, gameconfig.scale.height - 92, gameconfig.scale.width - 20, 78, 20);
+            dock.fillStyle(0x001820, 0.16);
+            dock.fillRoundedRect(14, gameconfig.scale.height - 100, gameconfig.scale.width - 28, 88, 28);
+            dock.fillStyle(0xffffff, 0.97);
+            dock.fillRoundedRect(10, gameconfig.scale.height - 106, gameconfig.scale.width - 20, 88, 28);
+            dock.lineStyle(1, 0xd7efe4, 1);
+            dock.strokeRoundedRect(10, gameconfig.scale.height - 106, gameconfig.scale.width - 20, 88, 28);
 
             const actions = [
                   { key: 'feed', label: 'Comida', icon: 'food', color: 0x21c178, onClick: () => this.feedPokemon() },
@@ -685,26 +768,30 @@ class PokegochiGame extends Phaser.Scene {
 
             actions.forEach((action, index) => {
                   const x = 35 + index * 72;
-                  const y = gameconfig.scale.height - 51;
+                  const y = gameconfig.scale.height - 64;
                   const color = action.color || 0xffd166;
-                  const circle = this.add.circle(x, y - 10, 23, color, 0.98)
-                        .setStrokeStyle(3, 0xffffff, 1)
+                  const ring = this.add.circle(x, y - 2, 27, color, 0.16)
+                        .setStrokeStyle(3, color, 1)
+                        .setDepth(this.uiDepth + 2);
+                  const circle = this.add.circle(x, y - 2, 22, 0xffffff, 1)
+                        .setStrokeStyle(2, 0xffffff, 1)
                         .setDepth(this.uiDepth + 2)
                         .setInteractive({ useHandCursor: true });
                   let icon;
 
                   if (action.key === 'play') {
-                        icon = this.add.sprite(x, y - 10, action.icon, 0).setScale(0.32).setDepth(this.uiDepth + 3);
+                        icon = this.add.sprite(x, y - 2, action.icon, 0).setScale(0.3).setDepth(this.uiDepth + 3);
                   } else {
-                        icon = this.add.image(x, y - 10, action.icon).setScale(0.5).setDepth(this.uiDepth + 3);
+                        icon = this.add.image(x, y - 2, action.icon).setScale(0.46).setDepth(this.uiDepth + 3);
                   }
+                  icon.setTint(color);
 
-                  const label = this.add.text(x, y + 18, action.label, {
+                  const label = this.add.text(x, y + 31, action.label, {
                         fontSize: '8px',
                         color: '#2d383d',
                         fontFamily: 'Pixel, monospace'
                   }).setOrigin(0.5).setDepth(this.uiDepth + 3);
-                  const cooldown = this.add.text(x, y - 42, '', {
+                  const cooldown = this.add.text(x, y - 39, '', {
                         fontSize: '8px',
                         color: '#ffffff',
                         fontFamily: 'Pixel, monospace',
@@ -720,17 +807,12 @@ class PokegochiGame extends Phaser.Scene {
                   icon.setInteractive({ useHandCursor: true }).on('pointerdown', trigger);
                   label.setInteractive({ useHandCursor: true }).on('pointerdown', trigger);
 
-                  this.buttons[action.key] = { circle, icon, label, cooldown, color };
+                  this.buttons[action.key] = { circle, ring, icon, label, cooldown, color };
             });
       }
 
       createTopButtons()
       {
-            this.add.text(gameconfig.scale.width / 2, gameconfig.scale.height - 16, 'Main Menu', {
-                  fontSize: '12px',
-                  color: '#2d383d',
-                  fontFamily: 'Pixel, monospace'
-            }).setOrigin(0.5).setDepth(this.uiDepth + 2);
       }
 
       togglePokemonSelector()
@@ -747,34 +829,45 @@ class PokegochiGame extends Phaser.Scene {
       {
             this.closePokemonSelector();
             this.selectorOpen = true;
+            if (this.toast) {
+                  this.toast.setVisible(false);
+            }
+            if (this.thought) {
+                  this.thought.setVisible(false);
+            }
 
             const depth = this.uiDepth + 30;
             this.selectorLayer = this.add.container(0, 0).setDepth(depth);
 
+            const overlay = this.add.rectangle(HERO_X, 320, gameconfig.scale.width, gameconfig.scale.height, 0x02111a, 0.48)
+                  .setInteractive();
+            overlay.on('pointerdown', () => this.closePokemonSelector());
+            this.selectorLayer.add(overlay);
+
             const panel = this.add.graphics();
-            panel.fillStyle(0x0b3b31, 0.22);
-            panel.fillRoundedRect(16, 116, 328, 190, 18);
-            panel.fillStyle(0xffffff, 0.96);
-            panel.fillRoundedRect(16, 112, 328, 190, 18);
+            panel.fillStyle(0x0b3b31, 0.28);
+            panel.fillRoundedRect(18, 78, 324, 468, 26);
+            panel.fillStyle(0xffffff, 0.98);
+            panel.fillRoundedRect(14, 72, 332, 468, 26);
             panel.lineStyle(2, 0xd9efe4, 1);
-            panel.strokeRoundedRect(16, 112, 328, 190, 18);
+            panel.strokeRoundedRect(14, 72, 332, 468, 26);
             this.selectorLayer.add(panel);
 
-            this.selectorLayer.add(this.add.text(34, 128, 'Trocar Pokemon', {
-                  fontSize: '13px',
+            this.selectorLayer.add(this.add.text(34, 92, 'Trocar Pokemon', {
+                  fontSize: '15px',
                   color: '#263238',
                   fontFamily: 'Pixel, monospace'
             }));
-            this.selectorLayer.add(this.add.text(242, 128, 'toque para usar', {
+            this.selectorLayer.add(this.add.text(34, 116, 'Escolha seu parceiro.', {
                   fontSize: '8px',
                   color: '#6a7880',
                   fontFamily: 'Pixel, monospace'
             }));
 
-            const startX = 52;
-            const startY = 174;
-            const gapX = 76;
-            const gapY = 70;
+            const startX = 54;
+            const startY = 170;
+            const gapX = 84;
+            const gapY = 90;
 
             POKEMON_MANIFEST.forEach((pokemon, index) => {
                   const col = index % 4;
@@ -783,12 +876,11 @@ class PokegochiGame extends Phaser.Scene {
                   const y = startY + row * gapY;
                   const selected = pokemon.id === this.state.species;
 
-                  const card = this.add.rectangle(x, y, 58, 54, selected ? 0xdff8e7 : 0xf6fbf8, 1)
+                  const card = this.add.rectangle(x, y, 74, 76, selected ? 0xdff8e7 : 0xf6fbf8, 1)
                         .setStrokeStyle(2, selected ? 0x1fc878 : 0xdbece2, 1)
                         .setInteractive({ useHandCursor: true });
-                  const sprite = this.add.sprite(x, y - 6, pokemon.id, 0)
-                        .setScale(Math.min(pokemon.scale * 0.55, 1.45));
-                  const label = this.add.text(x, y + 20, pokemon.displayName.slice(0, 8), {
+                  const preview = this.createPokemonPreview(pokemon, x, y - 10, 58, 0);
+                  const label = this.add.text(x, y + 26, pokemon.displayName.slice(0, 10), {
                         fontSize: '7px',
                         color: selected ? '#159456' : '#4d6067',
                         fontFamily: 'Pixel, monospace'
@@ -796,11 +888,11 @@ class PokegochiGame extends Phaser.Scene {
 
                   const choose = () => this.switchPokemon(pokemon.id);
                   card.on('pointerdown', choose);
-                  sprite.setInteractive({ useHandCursor: true }).on('pointerdown', choose);
+                  preview.setInteractive({ useHandCursor: true }).on('pointerdown', choose);
                   label.setInteractive({ useHandCursor: true }).on('pointerdown', choose);
 
                   this.selectorLayer.add(card);
-                  this.selectorLayer.add(sprite);
+                  this.selectorLayer.add(preview);
                   this.selectorLayer.add(label);
             });
       }
@@ -826,7 +918,12 @@ class PokegochiGame extends Phaser.Scene {
             this.saveState();
 
             if (this.pet) {
+                  this.tweens.killTweensOf(this.pet);
                   this.pet.destroy();
+            }
+
+            if (this.petShadow) {
+                  this.petShadow.destroy();
             }
 
             if (this.nameText) {
@@ -847,25 +944,50 @@ class PokegochiGame extends Phaser.Scene {
       {
             const pokemon = getPokemonById(this.state.species);
             const condition = this.getConditionLabel();
-            const displayName = (this.state.name || pokemon.displayName).length > 10
-                  ? (this.state.name || pokemon.displayName).slice(0, 9) + '.'
+            const displayName = (this.state.name || pokemon.displayName).length > 12
+                  ? (this.state.name || pokemon.displayName).slice(0, 11) + '.'
                   : (this.state.name || pokemon.displayName);
 
             this.hud.name.setText(displayName);
+            this.hud.species.setText(pokemon.displayName + ' / ' + this.getReadableAge());
+            this.hud.cp.setText('CP ' + this.getDisplayCP());
             this.hud.conditionPill.clear();
             this.hud.conditionPill.fillStyle(condition.color, 1);
-            this.hud.conditionPill.fillRoundedRect(140, 25, 72, 16, 8);
+            this.hud.conditionPill.fillRoundedRect(224, 324, 80, 20, 10);
             this.hud.condition.setText(condition.label);
             this.hud.levelNumber.setText(this.state.level.toString());
+            this.hud.leagueBadge.setTexture(this.getLeagueBadgeKey());
 
             this.updateStatChip('hunger', this.state.hunger);
             this.updateStatChip('energy', this.state.energy);
             this.updateStatChip('happiness', this.state.happiness);
             this.updateStatChip('affection', this.state.affection);
 
-            this.hud.xpFill.displayWidth = Math.max(2, 214 * this.state.xp / xpToNext(this.state.level));
+            this.hud.xpFill.displayWidth = Math.max(3, 260 * this.state.xp / xpToNext(this.state.level));
             this.hud.xpText.setText('XP ' + this.state.xp + '/' + xpToNext(this.state.level));
             this.hud.battle.setText(this.getBattleStatusText());
+
+            const progress = Phaser.Math.Clamp(this.getConditionScore() / 100, 0, 1);
+            const angle = Phaser.Math.DegToRad(205 + 130 * progress);
+            this.hud.cpDot.setPosition(HERO_X + Math.cos(angle) * 132, 244 + Math.sin(angle) * 132);
+      }
+
+      getDisplayCP()
+      {
+            return Math.round(300 + this.state.level * 42 + this.getConditionScore() * 6 + this.state.affection * 2);
+      }
+
+      getLeagueBadgeKey()
+      {
+            if (this.state.level >= 50) {
+                  return 'master_league_badge';
+            }
+
+            if (this.state.level >= 25) {
+                  return 'ultra_league_badge';
+            }
+
+            return 'great_league_badge';
       }
 
       getConditionLabel()
@@ -893,6 +1015,7 @@ class PokegochiGame extends Phaser.Scene {
       updateStatChip(key, value)
       {
             const row = this.statRows[key];
+            row.fill.displayWidth = Math.max(3, 122 * clamp(value) / STAT_MAX);
             row.value.setText(clamp(value).toString());
       }
 
@@ -925,6 +1048,7 @@ class PokegochiGame extends Phaser.Scene {
                   const blocked = this.isButtonBlocked(key, cooldowns[key]);
                   button.cooldown.setText(cooldowns[key] > 0 ? formatDuration(cooldowns[key]) : '');
                   button.circle.setAlpha(blocked ? 0.45 : 1);
+                  button.ring.setAlpha(blocked ? 0.35 : 1);
                   button.icon.setAlpha(blocked ? 0.45 : 1);
                   button.label.setAlpha(blocked ? 0.55 : 1);
             });
@@ -1048,7 +1172,6 @@ class PokegochiGame extends Phaser.Scene {
             this.state.battleEndTimestamp = now + BATTLE_DURATION_MS;
             this.state.battleSeed = Phaser.Math.Between(1, 999999);
             this.petTarget = null;
-            this.pet.setVelocity(0, 0);
 
             this.sounds.success.play();
             this.showToast('Batalha iniciada: 1 hora.');
@@ -1172,7 +1295,7 @@ class PokegochiGame extends Phaser.Scene {
 
             const ball = this.physics.add.sprite(this.pet.x, this.pet.y - 20, 'ball', 0)
                   .setScale(0.45)
-                  .setDepth(24)
+                  .setDepth(this.uiDepth + 24)
                   .setBounce(1)
                   .setCollideWorldBounds(true);
             ball.body.setBoundsRectangle(this.worldRect);
@@ -1195,7 +1318,7 @@ class PokegochiGame extends Phaser.Scene {
                         spawned++;
                         const bubble = this.add.sprite(Phaser.Math.Between(48, gameconfig.scale.width - 48), this.worldRect.bottom, 'bubble', 0)
                               .setScale(0.07)
-                              .setDepth(24)
+                              .setDepth(this.uiDepth + 24)
                               .setAlpha(0.85)
                               .setInteractive({ useHandCursor: true });
                         bubble.on('pointerdown', () => {
@@ -1230,14 +1353,14 @@ class PokegochiGame extends Phaser.Scene {
                   scale: { start: 0.45, end: 0.05 },
                   gravityY: -80,
                   tint
-            }).setDepth(26);
+            }).setDepth(this.uiDepth + 26);
 
             this.time.delayedCall(900, () => emitter.destroy());
       }
 
       createFloatingText()
       {
-            this.toast = this.add.text(gameconfig.scale.width / 2, 156, '', {
+            this.toast = this.add.text(gameconfig.scale.width / 2, 522, '', {
                   fontSize: '11px',
                   color: '#ffffff',
                   fontFamily: 'Pixel, monospace',
@@ -1245,7 +1368,7 @@ class PokegochiGame extends Phaser.Scene {
                   align: 'center',
                   padding: { x: 8, y: 5 },
                   wordWrap: { width: gameconfig.scale.width - 44 }
-            }).setOrigin(0.5).setDepth(this.uiDepth + 10).setVisible(false);
+            }).setOrigin(0.5).setDepth(this.uiDepth + 40).setVisible(false);
 
             this.thought = this.add.text(this.pet.x, this.pet.y - this.petThoughtOffset, '', {
                   fontSize: '10px',
@@ -1255,7 +1378,7 @@ class PokegochiGame extends Phaser.Scene {
                   align: 'center',
                   padding: { x: 7, y: 4 },
                   wordWrap: { width: 180 }
-            }).setOrigin(0.5).setDepth(25).setVisible(false);
+            }).setOrigin(0.5).setDepth(this.uiDepth + 28).setVisible(false);
       }
 
       showToast(text)

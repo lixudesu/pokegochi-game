@@ -61,6 +61,65 @@
     "file": "GENGAR.webp",
     "frameSize": 79,
     "frames": 44,
-    "scale": 1.75
+    "scale": 1.75,
+    "portrait": "go/gengar.png",
+    "portraitScale": 1.28,
+    "selectorScale": 0.32
+  },
+  {
+    "id": "umbreon",
+    "displayName": "Umbreon",
+    "portrait": "go/umbreon.png",
+    "portraitScale": 1.22,
+    "selectorScale": 0.32
+  },
+  {
+    "id": "registeel",
+    "displayName": "Registeel",
+    "portrait": "go/registeel.png",
+    "portraitScale": 1.12,
+    "selectorScale": 0.3
+  },
+  {
+    "id": "azumarill",
+    "displayName": "Azumarill",
+    "portrait": "go/azumarill.png",
+    "portraitScale": 1.25,
+    "selectorScale": 0.32
+  },
+  {
+    "id": "machamp",
+    "displayName": "Machamp",
+    "portrait": "go/machamp.png",
+    "portraitScale": 1.16,
+    "selectorScale": 0.31
+  },
+  {
+    "id": "sableye",
+    "displayName": "Sableye",
+    "portrait": "go/sableye.png",
+    "portraitScale": 1.3,
+    "selectorScale": 0.33
+  },
+  {
+    "id": "lanturn",
+    "displayName": "Lanturn",
+    "portrait": "go/lanturn.png",
+    "portraitScale": 1.18,
+    "selectorScale": 0.32
+  },
+  {
+    "id": "haunter",
+    "displayName": "Haunter",
+    "portrait": "go/haunter.png",
+    "portraitScale": 1.26,
+    "selectorScale": 0.33
+  },
+  {
+    "id": "victreebel",
+    "displayName": "Victreebel",
+    "portrait": "go/victreebel.png",
+    "portraitScale": 1.18,
+    "selectorScale": 0.32
   }
 ]

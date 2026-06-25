@@ -9,12 +9,14 @@ You choose a starter Pokemon, give it a name, and keep it happy through feeding,
 - Original project: [Krepagotchi](https://github.com/danielbrendel/krepagotchi-game)
 - Original author: Daniel Brendel
 - Fork target: [lixudesu/pokegochi-game](https://github.com/lixudesu/pokegochi-game)
+- Additional UI and Pokemon portrait assets adapted from the user-provided `POGO _ TELOS Academy [Mobile App 01] - Thinh Dinh (Community)` PDFs.
 
 This fork keeps the original MIT license and project credits.
 
 ## Features
 
-- Starter selection: Pikachu, Bulbasaur, Charmander, Squirtle, Eevee, Riolu, Mimikyu, and Gengar
+- Starter selection with the original sprite Pokemon plus GO-style portrait options extracted from the provided design PDFs
+- Pokemon GO-inspired profile screen with large front-facing Pokemon art, CP arc, level, league badge, XP, and status meters
 - Pokemon status: hunger, energy, happiness, affection, level, and XP
 - Feeding, petting, playing, sleeping, and biome switching
 - One-hour timed battles with win chance based on Pokemon condition and level
