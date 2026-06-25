@@ -10,6 +10,7 @@ const COOLDOWNS = {
       pet: 5 * 60 * 1000,
       play: 20 * 60 * 1000
 };
+const PET_SCALE_MULTIPLIER = 1.65;
 
 const POKEMON_MANIFEST = [
       { id: 'pikachu', displayName: 'Pikachu', file: 'PIKACHU.webp', frameSize: 50, frames: 56, scale: 2.35 },
@@ -154,11 +155,12 @@ class PokegochiGame extends Phaser.Scene {
       create()
       {
             this.uiDepth = 1000;
-            this.worldRect = new Phaser.Geom.Rectangle(18, 116, gameconfig.scale.width - 36, gameconfig.scale.height - 228);
+            this.worldRect = new Phaser.Geom.Rectangle(48, 174, gameconfig.scale.width - 96, gameconfig.scale.height - 332);
             this.buttons = {};
             this.hud = {};
             this.statRows = {};
             this.miniGameActive = false;
+            this.selectorOpen = false;
 
             this.createAnimations();
             this.loadBiome();
@@ -246,8 +248,8 @@ class PokegochiGame extends Phaser.Scene {
             const scale = Math.max(gameconfig.scale.width / background.width, gameconfig.scale.height / background.height);
             background.setScale(scale);
 
-            this.add.rectangle(gameconfig.scale.width / 2, 56, gameconfig.scale.width, 112, 0x103f34, 0.25).setDepth(4);
-            this.add.rectangle(gameconfig.scale.width / 2, gameconfig.scale.height - 44, gameconfig.scale.width, 88, 0x103f34, 0.32).setDepth(4);
+            this.add.rectangle(gameconfig.scale.width / 2, 58, gameconfig.scale.width, 116, 0x103f34, 0.12).setDepth(4);
+            this.add.rectangle(gameconfig.scale.width / 2, gameconfig.scale.height - 48, gameconfig.scale.width, 96, 0xffffff, 0.18).setDepth(4);
       }
 
       createWeather()
@@ -499,16 +501,20 @@ class PokegochiGame extends Phaser.Scene {
       createPet()
       {
             const pokemon = getPokemonById(this.state.species);
-            const petScale = pokemon.scale * 1.65;
+            const petScale = pokemon.scale * PET_SCALE_MULTIPLIER;
 
             this.pet = this.physics.add.sprite(gameconfig.scale.width / 2, 330, pokemon.id)
                   .setScale(petScale)
                   .setDepth(20)
-                  .setCollideWorldBounds(true);
+                  .setCollideWorldBounds(true)
+                  .play(pokemon.id + '_idle');
             this.pet.body.setCollideWorldBounds(true);
             this.pet.body.setBoundsRectangle(this.worldRect);
+            this.petTarget = this.pickPetTarget();
+            this.petNameOffset = Math.max(58, this.pet.displayHeight / 2 + 16);
+            this.petThoughtOffset = Math.max(76, this.pet.displayHeight / 2 + 34);
 
-            this.nameText = this.add.text(this.pet.x, this.pet.y + 96, this.state.name, {
+            this.nameText = this.add.text(this.pet.x, this.pet.y + this.petNameOffset, this.state.name, {
                   fontSize: '12px',
                   color: '#ffffff',
                   fontFamily: 'Pixel, monospace',
@@ -516,7 +522,7 @@ class PokegochiGame extends Phaser.Scene {
                   padding: { x: 6, y: 3 }
             }).setOrigin(0.5).setDepth(21);
 
-            this.sleepText = this.add.text(this.pet.x, this.pet.y - 118, 'Zzz', {
+            this.sleepText = this.add.text(this.pet.x, this.pet.y - this.petThoughtOffset, 'Zzz', {
                   fontSize: '20px',
                   color: '#d8ecff',
                   fontFamily: 'Pixel, monospace'
@@ -533,148 +539,360 @@ class PokegochiGame extends Phaser.Scene {
 
       movePet()
       {
-            this.pet.setVelocity(0, 0);
-            this.pet.setPosition(gameconfig.scale.width / 2, 330);
-            this.pet.setAlpha(this.state.battleActive ? 0.45 : 1);
+            if (this.state.sleeping || this.state.battleActive || this.miniGameActive || this.selectorOpen) {
+                  this.pet.setVelocity(0, 0);
+                  this.pet.setAlpha(this.state.battleActive ? 0.45 : 1);
+            } else {
+                  this.pet.setAlpha(1);
 
-            this.nameText.setPosition(this.pet.x, this.pet.y + 96);
-            this.sleepText.setPosition(this.pet.x, this.pet.y - 118);
+                  if (!this.petTarget || Phaser.Math.Distance.Between(this.pet.x, this.pet.y, this.petTarget.x, this.petTarget.y) < 14) {
+                        this.petTarget = this.pickPetTarget();
+                  }
+
+                  const speed = 18 + this.state.energy * 0.22;
+                  const angle = Phaser.Math.Angle.Between(this.pet.x, this.pet.y, this.petTarget.x, this.petTarget.y);
+                  this.physics.velocityFromRotation(angle, speed, this.pet.body.velocity);
+                  this.pet.setFlipX(this.pet.body.velocity.x < -2);
+            }
+
+            this.nameText.setPosition(this.pet.x, this.pet.y + this.petNameOffset);
+            this.sleepText.setPosition(this.pet.x, this.pet.y - this.petThoughtOffset);
             this.sleepText.setVisible(this.state.sleeping);
       }
 
       createHud()
       {
-            this.hud.title = this.add.text(10, 8, '', {
-                  fontSize: '14px',
-                  color: '#ffffff',
-                  fontFamily: 'Pixel, monospace'
-            }).setDepth(this.uiDepth);
-            this.hud.sub = this.add.text(10, 27, '', {
-                  fontSize: '10px',
-                  color: '#c9d7e8',
-                  fontFamily: 'Pixel, monospace'
-            }).setDepth(this.uiDepth);
+            const shadow = this.add.graphics().setDepth(this.uiDepth);
+            shadow.fillStyle(0x000000, 0.18);
+            shadow.fillRoundedRect(18, 16, 324, 98, 18);
 
-            this.createStatRow('hunger', 'Fome', 10, 48, 0xff6b6b);
-            this.createStatRow('energy', 'Energia', 10, 68, 0x77ddff);
-            this.createStatRow('happiness', 'Felicidade', 178, 48, 0xffd166);
-            this.createStatRow('affection', 'Afeicao', 178, 68, 0xff8ed8);
+            const panel = this.add.graphics().setDepth(this.uiDepth + 1);
+            panel.fillStyle(0xffffff, 0.97);
+            panel.fillRoundedRect(16, 10, 328, 98, 18);
+            panel.lineStyle(2, 0xe8f2e9, 1);
+            panel.strokeRoundedRect(16, 10, 328, 98, 18);
 
-            this.hud.level = this.add.text(10, 92, '', {
-                  fontSize: '10px',
+            this.drawPokeballIcon(58, 58, 34, this.uiDepth + 2);
+            const pokeballHit = this.add.circle(58, 58, 38, 0xffffff, 0.001)
+                  .setDepth(this.uiDepth + 4)
+                  .setInteractive({ useHandCursor: true });
+            pokeballHit.on('pointerdown', () => {
+                  this.sounds.click.play();
+                  this.togglePokemonSelector();
+            });
+
+            this.hud.name = this.add.text(96, 25, '', {
+                  fontSize: '17px',
+                  color: '#263238',
+                  fontFamily: 'Pixel, monospace'
+            }).setDepth(this.uiDepth + 3);
+
+            this.hud.conditionPill = this.add.graphics().setDepth(this.uiDepth + 2);
+            this.hud.condition = this.add.text(176, 30, '', {
+                  fontSize: '8px',
                   color: '#ffffff',
                   fontFamily: 'Pixel, monospace'
-            }).setDepth(this.uiDepth);
-            this.hud.battle = this.add.text(178, 92, '', {
-                  fontSize: '10px',
-                  color: '#ffffff',
+            }).setOrigin(0.5).setDepth(this.uiDepth + 3);
+
+            this.hud.levelCaption = this.add.text(286, 20, 'Nivel', {
+                  fontSize: '9px',
+                  color: '#6a7880',
                   fontFamily: 'Pixel, monospace'
-            }).setDepth(this.uiDepth);
+            }).setOrigin(0.5).setDepth(this.uiDepth + 3);
+            this.hud.levelNumber = this.add.text(286, 35, '', {
+                  fontSize: '31px',
+                  color: '#2f353a',
+                  fontFamily: 'Pixel, monospace'
+            }).setOrigin(0.5).setDepth(this.uiDepth + 3);
+
+            this.add.rectangle(96, 78, 214, 9, 0xd6f4de, 1).setOrigin(0, 0.5).setDepth(this.uiDepth + 2);
+            this.hud.xpFill = this.add.rectangle(96, 78, 214, 9, 0x1fc878, 1).setOrigin(0, 0.5).setDepth(this.uiDepth + 3);
+            this.hud.xpText = this.add.text(96, 88, '', {
+                  fontSize: '8px',
+                  color: '#3b4a51',
+                  fontFamily: 'Pixel, monospace'
+            }).setDepth(this.uiDepth + 3);
+            this.hud.battle = this.add.text(228, 88, '', {
+                  fontSize: '8px',
+                  color: '#3b4a51',
+                  fontFamily: 'Pixel, monospace'
+            }).setDepth(this.uiDepth + 3);
+
+            this.createStatChip('hunger', 'Fome', 14, 118, 0xff6b6b);
+            this.createStatChip('energy', 'Energia', 98, 118, 0x35aef2);
+            this.createStatChip('happiness', 'Feliz', 186, 118, 0xffb703);
+            this.createStatChip('affection', 'Afeto', 270, 118, 0xe56ad7);
       }
 
-      createStatRow(key, label, x, y, color)
+      drawPokeballIcon(x, y, radius, depth)
       {
-            this.add.text(x, y, label, {
-                  fontSize: '9px',
-                  color: '#ffffff',
-                  fontFamily: 'Pixel, monospace'
-            }).setDepth(this.uiDepth);
-            const bg = this.add.rectangle(x + 58, y + 5, 80, 7, 0x111111, 0.82)
-                  .setOrigin(0, 0.5)
-                  .setDepth(this.uiDepth);
-            const fill = this.add.rectangle(x + 58, y + 5, 80, 7, color, 0.95)
-                  .setOrigin(0, 0.5)
-                  .setDepth(this.uiDepth + 1);
-            const value = this.add.text(x + 142, y - 1, '', {
-                  fontSize: '9px',
-                  color: '#ffffff',
-                  fontFamily: 'Pixel, monospace'
-            }).setDepth(this.uiDepth);
+            const glow = this.add.circle(x, y, radius + 8, 0xffd447, 0.95).setDepth(depth);
+            const g = this.add.graphics().setDepth(depth + 1);
+            g.fillStyle(0xffffff, 1);
+            g.fillCircle(x, y, radius);
+            g.fillStyle(0xf04b37, 1);
+            g.slice(x, y, radius, Phaser.Math.DegToRad(180), Phaser.Math.DegToRad(360), false);
+            g.fillPath();
+            g.lineStyle(3, 0x2f3437, 1);
+            g.strokeCircle(x, y, radius);
+            g.lineBetween(x - radius + 4, y, x + radius - 4, y);
+            g.fillStyle(0xffffff, 1);
+            g.fillCircle(x, y, radius * 0.32);
+            g.lineStyle(3, 0x2f3437, 1);
+            g.strokeCircle(x, y, radius * 0.32);
 
-            this.statRows[key] = { bg, fill, value };
+            return glow;
+      }
+
+      createStatChip(key, label, x, y, color)
+      {
+            const bg = this.add.graphics().setDepth(this.uiDepth + 1);
+            bg.fillStyle(0xffffff, 0.92);
+            bg.fillRoundedRect(x, y, 76, 28, 14);
+            bg.lineStyle(1, 0xe5f2e8, 1);
+            bg.strokeRoundedRect(x, y, 76, 28, 14);
+
+            this.add.circle(x + 14, y + 14, 6, color, 1).setDepth(this.uiDepth + 2);
+            this.add.text(x + 25, y + 5, label, {
+                  fontSize: '8px',
+                  color: '#5f6f76',
+                  fontFamily: 'Pixel, monospace'
+            }).setDepth(this.uiDepth + 2);
+            const value = this.add.text(x + 25, y + 15, '', {
+                  fontSize: '10px',
+                  color: '#20292e',
+                  fontFamily: 'Pixel, monospace'
+            }).setDepth(this.uiDepth + 2);
+
+            this.statRows[key] = { value };
       }
 
       createMenu()
       {
+            const dock = this.add.graphics().setDepth(this.uiDepth + 1);
+            dock.fillStyle(0xffffff, 0.94);
+            dock.fillRoundedRect(10, gameconfig.scale.height - 92, gameconfig.scale.width - 20, 78, 20);
+            dock.lineStyle(1, 0xdcefe5, 1);
+            dock.strokeRoundedRect(10, gameconfig.scale.height - 92, gameconfig.scale.width - 20, 78, 20);
+
             const actions = [
-                  { key: 'feed', label: 'Alimentar', icon: 'food', onClick: () => this.feedPokemon() },
+                  { key: 'feed', label: 'Comida', icon: 'food', color: 0x21c178, onClick: () => this.feedPokemon() },
                   { key: 'pet', label: 'Carinho', icon: 'hand', onClick: () => this.petPokemon() },
-                  { key: 'play', label: 'Brincar', icon: 'ball', onClick: () => this.playWithPokemon() },
-                  { key: 'battle', label: 'Batalha', icon: 'health', onClick: () => this.startOrCheckBattle() },
-                  { key: 'sleep', label: 'Dormir', icon: 'heart', onClick: () => this.toggleSleep() }
+                  { key: 'play', label: 'Brincar', icon: 'ball', color: 0x35aef2, onClick: () => this.playWithPokemon() },
+                  { key: 'battle', label: 'Batalha', icon: 'health', color: 0xff8f2e, onClick: () => this.startOrCheckBattle() },
+                  { key: 'sleep', label: 'Dormir', icon: 'heart', color: 0xe56ad7, onClick: () => this.toggleSleep() }
             ];
 
             actions.forEach((action, index) => {
-                  const x = 36 + index * 72;
-                  const y = gameconfig.scale.height - 42;
-                  const slot = this.add.image(x, y - 13, 'slot').setScale(0.42).setDepth(this.uiDepth).setInteractive({ useHandCursor: true });
+                  const x = 35 + index * 72;
+                  const y = gameconfig.scale.height - 51;
+                  const color = action.color || 0xffd166;
+                  const circle = this.add.circle(x, y - 10, 23, color, 0.98)
+                        .setStrokeStyle(3, 0xffffff, 1)
+                        .setDepth(this.uiDepth + 2)
+                        .setInteractive({ useHandCursor: true });
                   let icon;
 
                   if (action.key === 'play') {
-                        icon = this.add.sprite(x, y - 14, action.icon, 0).setScale(0.34).setDepth(this.uiDepth + 1);
+                        icon = this.add.sprite(x, y - 10, action.icon, 0).setScale(0.32).setDepth(this.uiDepth + 3);
                   } else {
-                        icon = this.add.image(x, y - 14, action.icon).setScale(0.55).setDepth(this.uiDepth + 1);
+                        icon = this.add.image(x, y - 10, action.icon).setScale(0.5).setDepth(this.uiDepth + 3);
                   }
 
-                  const label = this.add.text(x, y + 17, action.label, {
+                  const label = this.add.text(x, y + 18, action.label, {
+                        fontSize: '8px',
+                        color: '#2d383d',
+                        fontFamily: 'Pixel, monospace'
+                  }).setOrigin(0.5).setDepth(this.uiDepth + 3);
+                  const cooldown = this.add.text(x, y - 42, '', {
                         fontSize: '8px',
                         color: '#ffffff',
-                        fontFamily: 'Pixel, monospace'
-                  }).setOrigin(0.5).setDepth(this.uiDepth + 1);
-                  const cooldown = this.add.text(x, y - 33, '', {
-                        fontSize: '8px',
-                        color: '#ffd166',
                         fontFamily: 'Pixel, monospace',
-                        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+                        backgroundColor: 'rgba(25, 51, 43, 0.72)',
                         padding: { x: 3, y: 2 }
-                  }).setOrigin(0.5).setDepth(this.uiDepth + 2);
+                  }).setOrigin(0.5).setDepth(this.uiDepth + 4);
 
                   const trigger = () => {
                         this.sounds.click.play();
                         action.onClick();
                   };
-                  slot.on('pointerdown', trigger);
+                  circle.on('pointerdown', trigger);
                   icon.setInteractive({ useHandCursor: true }).on('pointerdown', trigger);
                   label.setInteractive({ useHandCursor: true }).on('pointerdown', trigger);
 
-                  this.buttons[action.key] = { slot, icon, label, cooldown };
+                  this.buttons[action.key] = { circle, icon, label, cooldown, color };
             });
       }
 
       createTopButtons()
       {
-            const biome = this.add.image(gameconfig.scale.width - 23, 23, 'biome')
-                  .setScale(0.25)
-                  .setDepth(this.uiDepth + 1)
-                  .setInteractive({ useHandCursor: true });
-            biome.on('pointerdown', () => {
-                  const index = BIOMES.findIndex((item) => item.ident === this.biomeData.ident);
-                  const next = BIOMES[(index + 1) % BIOMES.length];
-                  localStorage.setItem(saveKey('biome'), next.ident);
-                  this.saveState(true);
-                  this.scene.restart();
+            this.add.text(gameconfig.scale.width / 2, gameconfig.scale.height - 16, 'Main Menu', {
+                  fontSize: '12px',
+                  color: '#2d383d',
+                  fontFamily: 'Pixel, monospace'
+            }).setOrigin(0.5).setDepth(this.uiDepth + 2);
+      }
+
+      togglePokemonSelector()
+      {
+            if (this.selectorOpen) {
+                  this.closePokemonSelector();
+                  return;
+            }
+
+            this.openPokemonSelector();
+      }
+
+      openPokemonSelector()
+      {
+            this.closePokemonSelector();
+            this.selectorOpen = true;
+
+            const depth = this.uiDepth + 30;
+            this.selectorLayer = this.add.container(0, 0).setDepth(depth);
+
+            const panel = this.add.graphics();
+            panel.fillStyle(0x0b3b31, 0.22);
+            panel.fillRoundedRect(16, 116, 328, 190, 18);
+            panel.fillStyle(0xffffff, 0.96);
+            panel.fillRoundedRect(16, 112, 328, 190, 18);
+            panel.lineStyle(2, 0xd9efe4, 1);
+            panel.strokeRoundedRect(16, 112, 328, 190, 18);
+            this.selectorLayer.add(panel);
+
+            this.selectorLayer.add(this.add.text(34, 128, 'Trocar Pokemon', {
+                  fontSize: '13px',
+                  color: '#263238',
+                  fontFamily: 'Pixel, monospace'
+            }));
+            this.selectorLayer.add(this.add.text(242, 128, 'toque para usar', {
+                  fontSize: '8px',
+                  color: '#6a7880',
+                  fontFamily: 'Pixel, monospace'
+            }));
+
+            const startX = 52;
+            const startY = 174;
+            const gapX = 76;
+            const gapY = 70;
+
+            POKEMON_MANIFEST.forEach((pokemon, index) => {
+                  const col = index % 4;
+                  const row = Math.floor(index / 4);
+                  const x = startX + col * gapX;
+                  const y = startY + row * gapY;
+                  const selected = pokemon.id === this.state.species;
+
+                  const card = this.add.rectangle(x, y, 58, 54, selected ? 0xdff8e7 : 0xf6fbf8, 1)
+                        .setStrokeStyle(2, selected ? 0x1fc878 : 0xdbece2, 1)
+                        .setInteractive({ useHandCursor: true });
+                  const sprite = this.add.sprite(x, y - 6, pokemon.id, 0)
+                        .setScale(Math.min(pokemon.scale * 0.55, 1.45));
+                  const label = this.add.text(x, y + 20, pokemon.displayName.slice(0, 8), {
+                        fontSize: '7px',
+                        color: selected ? '#159456' : '#4d6067',
+                        fontFamily: 'Pixel, monospace'
+                  }).setOrigin(0.5);
+
+                  const choose = () => this.switchPokemon(pokemon.id);
+                  card.on('pointerdown', choose);
+                  sprite.setInteractive({ useHandCursor: true }).on('pointerdown', choose);
+                  label.setInteractive({ useHandCursor: true }).on('pointerdown', choose);
+
+                  this.selectorLayer.add(card);
+                  this.selectorLayer.add(sprite);
+                  this.selectorLayer.add(label);
             });
+      }
+
+      closePokemonSelector()
+      {
+            if (this.selectorLayer) {
+                  this.selectorLayer.destroy(true);
+                  this.selectorLayer = null;
+            }
+
+            this.selectorOpen = false;
+      }
+
+      switchPokemon(species)
+      {
+            if (species === this.state.species) {
+                  this.closePokemonSelector();
+                  return;
+            }
+
+            this.state.species = species;
+            this.saveState();
+
+            if (this.pet) {
+                  this.pet.destroy();
+            }
+
+            if (this.nameText) {
+                  this.nameText.destroy();
+            }
+
+            if (this.sleepText) {
+                  this.sleepText.destroy();
+            }
+
+            this.createPet();
+            this.closePokemonSelector();
+            this.sounds.success.play();
+            this.showToast('Pokemon trocado para ' + getPokemonById(species).displayName + '.');
       }
 
       refreshHud()
       {
             const pokemon = getPokemonById(this.state.species);
-            this.hud.title.setText(this.state.name + ' / ' + pokemon.displayName);
-            this.hud.sub.setText(this.state.sleeping ? 'Dormindo' : (this.state.battleActive ? 'Em batalha' : 'Cuidando'));
+            const condition = this.getConditionLabel();
+            const displayName = (this.state.name || pokemon.displayName).length > 10
+                  ? (this.state.name || pokemon.displayName).slice(0, 9) + '.'
+                  : (this.state.name || pokemon.displayName);
 
-            this.updateStatBar('hunger', this.state.hunger);
-            this.updateStatBar('energy', this.state.energy);
-            this.updateStatBar('happiness', this.state.happiness);
-            this.updateStatBar('affection', this.state.affection);
+            this.hud.name.setText(displayName);
+            this.hud.conditionPill.clear();
+            this.hud.conditionPill.fillStyle(condition.color, 1);
+            this.hud.conditionPill.fillRoundedRect(140, 25, 72, 16, 8);
+            this.hud.condition.setText(condition.label);
+            this.hud.levelNumber.setText(this.state.level.toString());
 
-            this.hud.level.setText('Nivel ' + this.state.level + '  XP ' + this.state.xp + '/' + xpToNext(this.state.level));
+            this.updateStatChip('hunger', this.state.hunger);
+            this.updateStatChip('energy', this.state.energy);
+            this.updateStatChip('happiness', this.state.happiness);
+            this.updateStatChip('affection', this.state.affection);
+
+            this.hud.xpFill.displayWidth = Math.max(2, 214 * this.state.xp / xpToNext(this.state.level));
+            this.hud.xpText.setText('XP ' + this.state.xp + '/' + xpToNext(this.state.level));
             this.hud.battle.setText(this.getBattleStatusText());
       }
 
-      updateStatBar(key, value)
+      getConditionLabel()
+      {
+            if (this.state.battleActive) {
+                  return { label: 'Batalha', color: 0xff8f2e };
+            }
+
+            if (this.state.sleeping) {
+                  return { label: 'Sono', color: 0x5aa6ff };
+            }
+
+            const condition = this.getConditionScore();
+            if (condition >= 82) {
+                  return { label: 'Forte', color: 0x21c178 };
+            }
+
+            if (condition >= 58) {
+                  return { label: 'Bem', color: 0xf6a800 };
+            }
+
+            return { label: 'Cansado', color: 0xef5b5b };
+      }
+
+      updateStatChip(key, value)
       {
             const row = this.statRows[key];
-            row.fill.displayWidth = Math.max(2, 80 * clamp(value) / STAT_MAX);
             row.value.setText(clamp(value).toString());
       }
 
@@ -706,7 +924,7 @@ class PokegochiGame extends Phaser.Scene {
             Object.entries(this.buttons).forEach(([key, button]) => {
                   const blocked = this.isButtonBlocked(key, cooldowns[key]);
                   button.cooldown.setText(cooldowns[key] > 0 ? formatDuration(cooldowns[key]) : '');
-                  button.slot.setAlpha(blocked ? 0.45 : 1);
+                  button.circle.setAlpha(blocked ? 0.45 : 1);
                   button.icon.setAlpha(blocked ? 0.45 : 1);
                   button.label.setAlpha(blocked ? 0.55 : 1);
             });
@@ -1019,7 +1237,7 @@ class PokegochiGame extends Phaser.Scene {
 
       createFloatingText()
       {
-            this.toast = this.add.text(gameconfig.scale.width / 2, 126, '', {
+            this.toast = this.add.text(gameconfig.scale.width / 2, 156, '', {
                   fontSize: '11px',
                   color: '#ffffff',
                   fontFamily: 'Pixel, monospace',
@@ -1029,7 +1247,7 @@ class PokegochiGame extends Phaser.Scene {
                   wordWrap: { width: gameconfig.scale.width - 44 }
             }).setOrigin(0.5).setDepth(this.uiDepth + 10).setVisible(false);
 
-            this.thought = this.add.text(this.pet.x, this.pet.y - 82, '', {
+            this.thought = this.add.text(this.pet.x, this.pet.y - this.petThoughtOffset, '', {
                   fontSize: '10px',
                   color: '#ffffff',
                   fontFamily: 'Pixel, monospace',
@@ -1061,7 +1279,7 @@ class PokegochiGame extends Phaser.Scene {
 
       showThought()
       {
-            if (!this.thought || this.state.sleeping || this.state.battleActive) {
+            if (!this.thought || this.state.sleeping || this.state.battleActive || this.selectorOpen) {
                   return;
             }
 
@@ -1107,7 +1325,7 @@ class PokegochiGame extends Phaser.Scene {
                   return;
             }
 
-            this.thought.setPosition(this.pet.x, this.pet.y - 82);
+            this.thought.setPosition(this.pet.x, this.pet.y - this.petThoughtOffset);
       }
 
       getReadableAge()
